@@ -3,7 +3,7 @@
  * ║              🌚 WARNING BOT 🌚              ║
  * ║                                              ║
  * ║  Developer : হৃদয় হাসান শান্ত                ║
- * ║  Version   : 1.0.1                           ║
+ * ║  Version   : 1.0.2                           ║
  * ║  Platform  : Mirai / GoatBot                 ║
  * ╚══════════════════════════════════════════════╝
  */
@@ -14,7 +14,7 @@ const path = require("path");
 
 module.exports.config = {
   name: "🌚",
-  version: "1.0.1",
+  version: "1.0.2",
   hasPermssion: 0,
   credits: "হৃদয় হাসান শান্ত",
   description: "Random warning message with image/GIF",
@@ -78,13 +78,15 @@ const warningMessages = [
 ];
 
 function randomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
+  return array[
+    Math.floor(Math.random() * array.length)
+  ];
 }
 
 async function downloadFile(url, filePath) {
   const response = await axios({
     method: "GET",
-    url: url,
+    url,
     responseType: "stream",
     timeout: 30000,
     maxRedirects: 10,
@@ -100,22 +102,27 @@ async function downloadFile(url, filePath) {
 
     writer.on("finish", resolve);
     writer.on("error", reject);
-
     response.data.on("error", reject);
   });
 }
 
 async function sendWarning(api, event) {
-  const cacheDir = path.join(__dirname, "cache");
+  const cacheDir = path.join(
+    __dirname,
+    "cache"
+  );
 
   await fs.ensureDir(cacheDir);
 
   const imageUrl = randomItem(imageLinks);
-  const message = randomItem(warningMessages);
+  const message = randomItem(
+    warningMessages
+  );
 
-  const extension = imageUrl.toLowerCase().includes(".gif")
-    ? ".gif"
-    : ".jpg";
+  const extension =
+    imageUrl.toLowerCase().includes(".gif")
+      ? ".gif"
+      : ".jpg";
 
   const filePath = path.join(
     cacheDir,
@@ -125,72 +132,122 @@ async function sendWarning(api, event) {
   );
 
   try {
-    await downloadFile(imageUrl, filePath);
+    await downloadFile(
+      imageUrl,
+      filePath
+    );
 
     const msg = {
       body:
         `${message}\n\n` +
         `━━━━━━━━━━━━━━━━━━\n` +
-        `` +
-       \n` +
+        `🌚 𝗪𝗔𝗥𝗡𝗜𝗡𝗚 𝗠𝗘𝗦𝗦𝗔𝗚𝗘 🌚\n` +
+        `👑 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐞𝐫: হৃদয় হাসান শান্ত\n` +
         `━━━━━━━━━━━━━━━━━━`,
-      attachment: fs.createReadStream(filePath)
+
+      attachment:
+        fs.createReadStream(filePath)
     };
 
-    await new Promise((resolve, reject) => {
-      api.sendMessage(msg, event.threadID, (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
+    await new Promise(
+      (resolve, reject) => {
+        api.sendMessage(
+          msg,
+          event.threadID,
+          (err) => {
+            if (err) {
+              return reject(err);
+            }
+
+            resolve();
+          }
+        );
+      }
+    );
 
   } finally {
-    await fs.remove(filePath).catch(() => {});
+    await fs
+      .remove(filePath)
+      .catch(() => {});
   }
 }
+
 
 /**
  * 🌚 No Prefix Trigger
  */
-module.exports.handleEvent = async function ({ api, event }) {
-  if (!event || !event.body) return;
+module.exports.handleEvent =
+  async function ({ api, event }) {
 
-  const body = event.body.trim();
+    if (
+      !event ||
+      !event.body
+    ) {
+      return;
+    }
 
-  if (body !== "🌚") return;
+    const body =
+      event.body.trim();
 
-  try {
-    await sendWarning(api, event);
-  } catch (error) {
-    console.error("🌚 HANDLE EVENT ERROR:", error);
+    if (body !== "🌚") {
+      return;
+    }
 
     try {
-      await api.sendMessage(
-        "⚠️ ছবি/GIF লোড করতে সমস্যা হয়েছে! একটু পরে আবার চেষ্টা করো।",
-        event.threadID
+      await sendWarning(
+        api,
+        event
       );
-    } catch (sendError) {
-      console.error("🌚 ERROR MESSAGE SEND ERROR:", sendError);
+
+    } catch (error) {
+      console.error(
+        "🌚 HANDLE EVENT ERROR:",
+        error
+      );
+
+      try {
+        await api.sendMessage(
+          "⚠️ ছবি/GIF লোড করতে সমস্যা হয়েছে! একটু পরে আবার চেষ্টা করো।",
+          event.threadID
+        );
+      } catch (sendError) {
+        console.error(
+          "🌚 ERROR MESSAGE SEND ERROR:",
+          sendError
+        );
+      }
     }
-  }
-};
+  };
+
 
 /**
  * 🌚 Prefix Command
  */
-module.exports.run = async function ({ api, event }) {
-  try {
-    await sendWarning(api, event);
-  } catch (error) {
-    console.error("🌚 RUN ERROR:", error);
+module.exports.run =
+  async function ({ api, event }) {
 
     try {
-      await api.sendMessage(
-        "❌ 🌚 ফাইল রান করতে সমস্যা হয়েছে।",
-        event.threadID
+      await sendWarning(
+        api,
+        event
       );
-    } catch (sendError) {
-      console.error("🌚 RUN SEND ERROR:", sendError);
+
+    } catch (error) {
+      console.error(
+        "🌚 RUN ERROR:",
+        error
+      );
+
+      try {
+        await api.sendMessage(
+          "❌ 🌚 ফাইল রান করতে সমস্যা হয়েছে।",
+          event.threadID
+        );
+      } catch (sendError) {
+        console.error(
+          "🌚 RUN SEND ERROR:",
+          sendError
+        );
+      }
     }
-  }
-};
+  };
