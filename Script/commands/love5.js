@@ -1,125 +1,604 @@
-const axios = require("axios");
+/**
+ * ╔══════════════════════════════════════════════╗
+ * ║              LOVE5 — STANDALONE              ║
+ * ║        Developer: হৃদয় হাসান শান্ত           ║
+ * ║              Version: 3.0.0                  ║
+ * ╚══════════════════════════════════════════════╝
+ *
+ * No Rahat API
+ * No api.json
+ * No external custom API
+ */
+
 const fs = require("fs-extra");
 const path = require("path");
 
 module.exports.config = {
-  name: "love5", //⚠️ 𝗗𝗼𝗻'𝘁 𝗖𝗵𝗮𝗻𝗴𝗲 𝗡𝗮𝗺𝗲 — 𝗖𝗺𝗱 𝗪𝗶𝗹𝗹 𝗡𝗼𝘁 𝗪𝗼𝗿𝗸✅
-  version: "2.0",
+  name: "love5",
+  version: "3.0.0",
   hasPermssion: 0,
-  credits: "🔰𝐑𝐀𝐇𝐀𝐓 𝐈𝐒𝐋𝐀𝐌🔰", //⚠️ 𝗗𝗼𝗻'𝘁 𝗖𝗵𝗮𝗻𝗴𝗲 𝗖𝗿𝗲𝗱𝗶𝘁 — 𝗖𝗺𝗱 𝗪𝗼𝗻'𝘁 𝗪𝗼𝗿𝗸✅
-  description: "image generate",
+  credits: "💠 হৃদয় হাসান শান্ত",
+  description: "Generate Love5 image",
   commandCategory: "Image",
-  usages: "[@mention/reply/uid/link]",
+  usages: "[@mention / reply / uid / profile link]",
   cooldowns: 5
 };
 
-const API_JSON_URL = "https://raw.githubusercontent.com/Rahat-Islam10/-Rahat-Boss-/refs/heads/main/api.json";
-async function getUIDByFullName(api, threadID, body) {
-  if (!body.includes("@")) return null;
-  const match = body.match(/@(.+)/);
-  if (!match) return null;
-const targetName = match[1].trim().toLowerCase().replace(/\s+/g, " ");
-  const threadInfo = await api.getThreadInfo(threadID);
-  const users = threadInfo.userInfo || [];
-const user = users.find(u => {
-    if (!u.name) return false;
-    const fullName = u.name.trim().toLowerCase().replace(/\s+/g, " ");
-    return fullName === targetName;
-  });
-return user ? user.id : null;
-}
-async function getApiList(commandName) {
-  const res = await axios.get(API_JSON_URL, { timeout: 15000 });
-  const data = res.data || {};
-  const cmdData = data[commandName];
- if (!cmdData || !cmdData.api) {
-    throw new Error(`❌"${commandName}" API পাওয়া যায়নি`);
-  }
-const apiList = [cmdData.api, ...(cmdData.backupApis || [])].filter(Boolean);
-  if (!apiList.length) {
-    throw new Error(`❌"${commandName}" Api পাওয়া যায়নি`);
-  }
-return apiList;
-}
-async function generateFrameWithFallback({ senderID, mention, credit, apiList }) {
-  let lastError = null;
- for (const baseApi of apiList) {
-    const cleanBase = baseApi.replace(/\/+$/, "");
-    const apiUrl = `${cleanBase}/api/frame?type=love5&senderId=${senderID}&mentionId=${mention}&credit=${encodeURIComponent(credit)}`;
+
+/* ═══════════════════════════════════════════════
+   GET UID FROM @NAME
+═══════════════════════════════════════════════ */
+async function getUIDByName(api, threadID, text) {
   try {
-      const response = await axios.get(apiUrl, {
-        timeout: 30000,
-        responseType: 'json'
-      });
-  const data = response.data;
-      if (data.image && data.captionTemplate) {
-        const imageBuffer = Buffer.from(data.image, 'base64');
-        return { imageBuffer, captionTemplate: data.captionTemplate };
-      } else {
-        throw new Error("❌API Error");
-      }
-    } catch (error) {
-      lastError = error;
-      if (error.response?.status === 401 && error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-    }
-  }
- throw lastError || new Error("❌API কাজ করছে না");
-}
-module.exports.run = async function ({ api, event, args }) {
-  try {
-    let mention, mentionName;
-  if (event.type === "message_reply") {
-      mention = event.messageReply.senderID;
-    } else if (args[0]) {
-      if (args[0].includes(".com/")) {
-        mention = await api.getUID(args[0]);
-      } else if (args.join().includes("@")) {
-        mention = Object.keys(event.mentions || {})[0];
-        if (!mention) mention = await getUIDByFullName(api, event.threadID, args.join(" "));
-      } else {
-        mention = args[0];
-      }
-    } else {
-      return api.sendMessage("❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗺𝗲𝗻𝘁𝗶𝗼𝗻 𝗮 𝘂𝘀𝗲𝗿", event.threadID, event.messageID);
-    }
-  if (!mention) {
-      return api.sendMessage("❌ 𝗨𝘀𝗲𝗿 𝗻𝗼𝘁 𝗳𝗼𝘂𝗻𝗱 🐸\n𝗣𝗹𝗲𝗮𝘀𝗲 𝗰𝗵𝗲𝗰𝗸 𝗵𝗲𝗿 𝗽𝗿𝗼𝗳𝗶𝗹𝗲", event.threadID, event.messageID);
-    }
-   const userInfo = await api.getUserInfo(mention);
-    mentionName = userInfo[mention]?.name || "Unknown";
-    const senderID = event.senderID;
-    const credit = module.exports.config.credits;
-  const waiting = await api.sendMessage("⏳𝗣𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁....", event.threadID);
- const apiConfigList = await getApiList(module.exports.config.name);
-    const { imageBuffer, captionTemplate } = await generateFrameWithFallback({
-      senderID,
-      mention,
-      credit,
-      apiList: apiConfigList
+    if (!text || !text.includes("@")) return null;
+
+    const match = text.match(/@(.+)/);
+    if (!match) return null;
+
+    const targetName = match[1]
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+    const info = await api.getThreadInfo(threadID);
+    const users = info?.userInfo || [];
+
+    const user = users.find(u => {
+      if (!u?.name || !u?.id) return false;
+
+      const name = u.name
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+      return name === targetName;
     });
-    const finalCaption = captionTemplate.replace(/{{name}}/g, mentionName);
-    const outPath = path.join(__dirname, `love5_${Date.now()}.png`);
-    fs.writeFileSync(outPath, imageBuffer);
-    await api.unsendMessage(waiting.messageID);
-    const messageInfo = await api.sendMessage(
-      {
-        body: finalCaption,
-        mentions: [{ tag: mentionName, id: mention }],
-        attachment: fs.createReadStream(outPath)
-      },
+
+    return user?.id || null;
+
+  } catch (error) {
+    return null;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════
+   ESCAPE XML
+═══════════════════════════════════════════════ */
+function escapeXML(text) {
+  return String(text || "Unknown")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+
+/* ═══════════════════════════════════════════════
+   CREATE LOVE5 SVG
+═══════════════════════════════════════════════ */
+function createLoveSVG(senderName, targetName) {
+
+  const sender = escapeXML(senderName);
+  const target = escapeXML(targetName);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1200"
+  height="800"
+  viewBox="0 0 1200 800">
+
+  <defs>
+
+    <linearGradient
+      id="background"
+      x1="0"
+      y1="0"
+      x2="1"
+      y2="1">
+
+      <stop
+        offset="0%"
+        stop-color="#ff416c"/>
+
+      <stop
+        offset="50%"
+        stop-color="#ff4b2b"/>
+
+      <stop
+        offset="100%"
+        stop-color="#ff758c"/>
+
+    </linearGradient>
+
+    <filter id="shadow">
+
+      <feDropShadow
+        dx="0"
+        dy="10"
+        stdDeviation="14"
+        flood-opacity="0.25"/>
+
+    </filter>
+
+  </defs>
+
+
+  <!-- Background -->
+
+  <rect
+    width="1200"
+    height="800"
+    rx="45"
+    fill="url(#background)"/>
+
+
+  <!-- Decorative hearts -->
+
+  <text
+    x="80"
+    y="150"
+    font-size="90"
+    fill="white"
+    opacity="0.65">
+    ♥
+  </text>
+
+  <text
+    x="1060"
+    y="150"
+    font-size="75"
+    fill="white"
+    opacity="0.65">
+    ♥
+  </text>
+
+  <text
+    x="85"
+    y="690"
+    font-size="65"
+    fill="white"
+    opacity="0.60">
+    ♥
+  </text>
+
+  <text
+    x="1060"
+    y="700"
+    font-size="90"
+    fill="white"
+    opacity="0.65">
+    ♥
+  </text>
+
+
+  <!-- Main Card -->
+
+  <rect
+    x="100"
+    y="100"
+    width="1000"
+    height="600"
+    rx="50"
+    fill="white"
+    filter="url(#shadow)"/>
+
+
+  <!-- Header -->
+
+  <text
+    x="600"
+    y="195"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="58"
+    font-weight="bold"
+    fill="#ff416c">
+    LOVE 5
+  </text>
+
+
+  <!-- Subtitle -->
+
+  <text
+    x="600"
+    y="245"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="25"
+    fill="#777">
+    Two hearts • One feeling
+  </text>
+
+
+  <!-- Big Heart -->
+
+  <text
+    x="600"
+    y="440"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="190"
+    fill="#ff416c">
+    ♥
+  </text>
+
+
+  <!-- Sender -->
+
+  <text
+    x="600"
+    y="510"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="38"
+    font-weight="bold"
+    fill="#333">
+    ${sender}
+  </text>
+
+
+  <!-- Connection -->
+
+  <text
+    x="600"
+    y="555"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="25"
+    fill="#ff416c">
+    ♥  LOVE  ♥
+  </text>
+
+
+  <!-- Target -->
+
+  <text
+    x="600"
+    y="615"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="38"
+    font-weight="bold"
+    fill="#333">
+    ${target}
+  </text>
+
+
+  <!-- Developer -->
+
+  <text
+    x="600"
+    y="755"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="20"
+    fill="white">
+    Developer: হৃদয় হাসান শান্ত
+  </text>
+
+</svg>`;
+}
+
+
+/* ═══════════════════════════════════════════════
+   MAIN COMMAND
+═══════════════════════════════════════════════ */
+module.exports.run = async function ({
+  api,
+  event,
+  args
+}) {
+
+  let waiting = null;
+  let outputFile = null;
+
+  try {
+
+    let mention = null;
+
+
+    /* ─────────────────────────
+       REPLY
+    ───────────────────────── */
+
+    if (
+      event.type === "message_reply" &&
+      event.messageReply?.senderID
+    ) {
+
+      mention = event.messageReply.senderID;
+    }
+
+
+    /* ─────────────────────────
+       DIRECT MENTION
+    ───────────────────────── */
+
+    else if (
+      event.mentions &&
+      Object.keys(event.mentions).length > 0
+    ) {
+
+      mention =
+        Object.keys(event.mentions)[0];
+    }
+
+
+    /* ─────────────────────────
+       ARGUMENT
+    ───────────────────────── */
+
+    else if (args?.length) {
+
+      const input =
+        args.join(" ").trim();
+
+
+      /* Facebook profile link */
+
+      if (
+        input.includes("facebook.com/") ||
+        input.includes("m.me/")
+      ) {
+
+        if (
+          typeof api.getUID === "function"
+        ) {
+
+          mention =
+            await api.getUID(input);
+        }
+
+      }
+
+
+      /* @Name */
+
+      else if (input.includes("@")) {
+
+        mention =
+          await getUIDByName(
+            api,
+            event.threadID,
+            input
+          );
+      }
+
+
+      /* UID */
+
+      else {
+
+        mention = input;
+      }
+    }
+
+
+    /* ─────────────────────────
+       CHECK USER
+    ───────────────────────── */
+
+    if (!mention) {
+
+      return api.sendMessage(
+        "❌ একজন user-কে mention/reply করুন।\n\n" +
+        "Example:\n" +
+        "/love5 @User",
+        event.threadID,
+        event.messageID
+      );
+    }
+
+
+    /* ─────────────────────────
+       GET NAMES
+    ───────────────────────── */
+
+    let senderName = "Someone";
+    let targetName = "Unknown";
+
+
+    try {
+
+      const senderInfo =
+        await api.getUserInfo(
+          event.senderID
+        );
+
+      senderName =
+        senderInfo?.[event.senderID]?.name ||
+        "Someone";
+
+    } catch (e) {}
+
+
+    try {
+
+      const targetInfo =
+        await api.getUserInfo(mention);
+
+      targetName =
+        targetInfo?.[mention]?.name ||
+        "Unknown";
+
+    } catch (e) {}
+
+
+    /* ─────────────────────────
+       WAITING
+    ───────────────────────── */
+
+    waiting =
+      await api.sendMessage(
+        "⏳ Love5 image তৈরি হচ্ছে...\n" +
+        "❤️ Please wait...",
+        event.threadID
+      );
+
+
+    /* ─────────────────────────
+       CREATE IMAGE
+    ───────────────────────── */
+
+    const svg =
+      createLoveSVG(
+        senderName,
+        targetName
+      );
+
+
+    outputFile = path.join(
+      __dirname,
+      `love5_${Date.now()}.svg`
+    );
+
+
+    await fs.writeFile(
+      outputFile,
+      svg,
+      "utf8"
+    );
+
+
+    /* ─────────────────────────
+       REMOVE WAITING
+    ───────────────────────── */
+
+    if (waiting?.messageID) {
+
+      try {
+
+        await api.unsendMessage(
+          waiting.messageID
+        );
+
+      } catch (e) {}
+
+    }
+
+
+    /* ─────────────────────────
+       SEND RESULT
+    ───────────────────────── */
+
+    const sent =
+      await api.sendMessage(
+        {
+          body:
+            `❤️ LOVE 5 ❤️\n\n` +
+            `👤 ${senderName}\n` +
+            `♥️ ${targetName}\n\n` +
+            `💠 হৃদয় হাসান শান্ত`,
+
+          mentions: [
+            {
+              tag: targetName,
+              id: mention
+            }
+          ],
+
+          attachment:
+            fs.createReadStream(
+              outputFile
+            )
+        },
+
+        event.threadID,
+        event.messageID
+      );
+
+
+    /* ─────────────────────────
+       AUTO CLEANUP
+    ───────────────────────── */
+
+    setTimeout(async () => {
+
+      try {
+
+        if (sent?.messageID) {
+
+          await api.unsendMessage(
+            sent.messageID
+          );
+        }
+
+      } catch (e) {}
+
+
+      try {
+
+        if (
+          outputFile &&
+          await fs.pathExists(
+            outputFile
+          )
+        ) {
+
+          await fs.remove(
+            outputFile
+          );
+        }
+
+      } catch (e) {}
+
+    }, 120000);
+
+
+  } catch (error) {
+
+    console.error(
+      "[LOVE5 ERROR]",
+      error
+    );
+
+
+    /* Remove waiting */
+
+    if (waiting?.messageID) {
+
+      try {
+
+        await api.unsendMessage(
+          waiting.messageID
+        );
+
+      } catch (e) {}
+
+    }
+
+
+    /* Remove file */
+
+    if (outputFile) {
+
+      try {
+
+        if (
+          await fs.pathExists(
+            outputFile
+          )
+        ) {
+
+          await fs.remove(
+            outputFile
+          );
+        }
+
+      } catch (e) {}
+
+    }
+
+
+    return api.sendMessage(
+      "⚠️ LOVE5 ERROR\n\n" +
+      `❌ ${error?.message || "Unknown error"}`,
       event.threadID,
       event.messageID
     );
-  setTimeout(async () => {
-      try {
-        await api.unsendMessage(messageInfo.messageID);
-        fs.unlinkSync(outPath);
-      } catch (e) {}
-    }, 120000);
-
-  } catch (error) {
-    return api.sendMessage(`⚠️ ${error.message}`, event.threadID);
   }
 };
